@@ -1,0 +1,178 @@
+  --- First, i will try to understand the datasets 
+  --- What IS the primary key CONNECTION FOR both tables 
+  --- Also created aliases FOR both tables TO shorten the TABLE name
+SELECT
+  *
+FROM
+  `august-cascade-339914.Referendum.referendum_data` AS referendum_results;
+
+SELECT
+*
+FROM `august-cascade-339914.Referendum.census` AS census;
+
+-- Exploring the referendum TABLE first 
+-- Who won the referendum? What are the average leave and average remain percentages?
+  
+SELECT
+  ROUND(AVG(Percent_Leave),2) AS Leavers,
+  ROUND(AVG(Percent_Remain),2) AS Remainers
+FROM
+  `august-cascade-339914.Referendum.referendum_data`
+
+---How did the various REGIONS vote?
+---What were the total votes?
+---What was the turnout
+
+SELECT Region,SUM(_Leave_)as Voted_Leave, SUM(_Remain_) AS Voted_Remain, ROUND(sum(_Verified_Ballot_Papers_)/sum(_Electorate_)*100,2) as Overall_turnout
+  FROM
+  `august-cascade-339914.Referendum.referendum_data`
+GROUP BY Region
+ORDER BY Region
+
+---Top five areas that supported Remain? 
+SELECT Area, Percent_Remain
+FROM `august-cascade-339914.Referendum.referendum_data`
+WHERE Voting = 'Remain'
+ORDER BY Percent_Remain DESC
+LIMIT 5
+
+---Top five areas that supported leave? 
+SELECT Area, Percent_Leave
+FROM `august-cascade-339914.Referendum.referendum_data`
+WHERE Voting = 'Leave'
+ORDER BY Percent_Leave DESC
+LIMIT 5
+
+---Using CASE WHEN to add an additional column
+SELECT Area, Percent_Turnout,
+CASE
+ WHEN  Percent_Turnout > 60 THEN 'More than average turnout'
+ WHEN Percent_Turnout = 60 THEN 'Average Turnout'
+ ELSE 'Less than average turnout'
+END AS TurnoutPoll
+FROM `august-cascade-339914.Referendum.referendum_data`
+ORDER BY Percent_Turnout
+
+
+----Now Exploring the census data
+---How many residents are in each District on the dataset?
+
+SELECT Type, sum(All_Residents) as Total_Residents
+FROM `august-cascade-339914.Referendum.census`
+GROUP BY Type
+
+---Age demographics
+---How many residents in each area are age 20 -29? 
+---How many residents in each area are age 30 -49? 
+---How many residents in each area are age 50 -69? 
+---How many residents in each area are age 70 and above? 
+---(Census data does not detail again 18 -19 separate so will excludde 15-19 from my analysis)
+
+
+SELECT 
+Area_name,
+Code,
+Age_20_to_24+Age_25_to_29 as age20to29,
+Age_30_to_34+Age_35_to_39+Age_40_to_44+Age_45_to_49 as Age30to49,
+Age_50_to_54+Age_55_to_59+Age_60_to_64+Age_65_to_69 as Age50to69,
+IFNULL(Age_70_to_74+Age_75_to_79+Age_80_to_84+Age_85_to_89+Age_90_and_Over,0) as Age70andover,
+FROM `august-cascade-339914.Referendum.census` as census_demographics
+
+--- I will perform an inner join using Area as primary key
+
+SELECT 
+Region,
+Code,
+Area_name,
+All_Residents,
+Age_20_to_24+Age_25_to_29 as age20to29,
+Age_30_to_34+Age_35_to_39+Age_40_to_44+Age_45_to_49 as Age30to49,
+Age_50_to_54+Age_55_to_59+Age_60_to_64+Age_65_to_69 as Age50to69,
+IFNULL(Age_70_to_74+Age_75_to_79+Age_80_to_84+Age_85_to_89+Age_90_and_Over,0) as Age70andover,
+_Leave_ as Leave_votes,
+_Remain_ as Remain_votes,
+Percent_Leave, 
+Percent_Remain,
+Percent_Turnout,
+Voting,
+FROM `august-cascade-339914.Referendum.census` as census_demographics
+INNER JOIN `august-cascade-339914.Referendum.referendum_data` as ref_data
+ON census_demographics.Area_Name = ref_data.Area
+
+
+
+-- I saved the JOIN result as an additional table.
+--Subsequent tables will be based on the table referendum_census.
+---- Order by Turnout
+
+
+SELECT 
+Region,
+Code,
+Area_name,
+age20to29 as Under30s,
+ROUND(((age20to29)/All_Residents)*100,2) AS Percent_Under30s,
+Age30to49+Age50to69+Age70andover as Over30s,
+ROUND(((Age30to49+Age50to69+Age70andover)/All_Residents)*100,2) AS Percent_Over30s,
+Percent_Leave, 
+Percent_Remain,
+Percent_Turnout,
+Voting,
+FROM `august-cascade-339914.Referendum.referendum_census`
+order by Percent_Under30s DESC 
+
+---- Checking there is any correlation between age demographics and voting turnout
+
+SELECT
+Region,
+ROUND(AVG(Percent_Turnout),2) AS OverallPercentTurnout, 
+SUM(age20to29) as AgeUnder30s,
+SUM(Age30to49+Age50to69+Age70andover) as AgeOver30s,
+FROM `august-cascade-339914.Referendum.referendum_census`
+GROUP BY Region
+order by OverallPercentTurnout
+
+---- Adding a column with case when
+
+SELECT
+Region,
+ROUND(AVG(Percent_Turnout),2) AS OverallPercentTurnout, 
+SUM(age20to29) as AgeUnder30s,
+SUM(Age30to49+Age50to69+Age70andover) as AgeOver30s,
+CASE 
+ WHEN SUM(age20to29) > SUM(Age30to49+Age50to69+Age70andover) THEN 'More younger people'
+ WHEN SUM(age20to29) < SUM(Age30to49+Age50to69+Age70andover) THEN 'Less younger people'
+ else 'Equal Numbers'
+End AS AgeDemographics
+FROM `august-cascade-339914.Referendum.referendum_census`
+GROUP BY Region
+
+---- Let's see what happens when i include Area aas a column
+SELECT
+Region,
+Area_name,
+Voting,
+ROUND(Percent_Turnout,2) AS PercentTurnout, 
+age20to29 as AgeUnder30s,
+Age30to49+Age50to69+Age70andover as AgeOver30s,
+CASE 
+ WHEN age20to29 > Age30to49+Age50to69+Age70andover THEN 'More younger people'
+ WHEN age20to29 < Age30to49+Age50to69+Age70andover THEN 'Less younger people'
+ else 'Equal Numbers'
+End AS AgeDemographics
+FROM `august-cascade-339914.Referendum.referendum_census`
+
+
+---I want to confirm the number of leave votes by area vs Remain vote areas by Regions
+---I will use the COUNTIF Function
+
+SELECT
+Region,
+COUNTIF(Voting = "Leave") AS Leave_areas,
+COUNTIF(Voting = "Remain") AS Remain_areas, 
+ROUND(AVG(Percent_Turnout),2) AS OverallPercentTurnout, 
+SUM(age20to29) as AgeUnder30s,
+SUM(Age30to49+Age50to69+Age70andover) as AgeOver30s,
+  FROM `august-cascade-339914.Referendum.referendum_census`
+ GROUP BY Region
+
