@@ -26,5 +26,6 @@ The Electoral Commission published the results of the EU referendum by district 
 
 **Limitations**
 - Northern Ireland results record is not broken down by city and has only one line. Had to source further data from BBC referendum results analysis in order to create a proper filled map in Tableau
-- -
+- The data provided was not sufficient to be able to verify turnout and voting preferences by age
+
 
