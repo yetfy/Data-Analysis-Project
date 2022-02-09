@@ -5,7 +5,7 @@ This is my first github repository
 
 # Data-Analysis-Projects
 
-This repository is mainly for projects that i am currently udnertaking under a data Analytics bootcamp and also personal projects.
+This repository is mainly for projects that i am currently udnertaking under a data Analytics projects.
 
 **Tools **
 SQL 
