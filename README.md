@@ -8,9 +8,13 @@ This is my first github repository
 This repository is mainly for projects that i am currently udnertaking under a data Analytics projects.
 
 **Tools **
+
 SQL 
+
 POwerBI
+
 Tableau
+
 MS Excel
 
 **Project 1 - EU Referendum 2016 Analysis**
